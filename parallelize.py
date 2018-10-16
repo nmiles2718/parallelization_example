@@ -164,4 +164,4 @@ def main(N=20, serial=False, use_dask=False,
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    obj = main(args.N, args.s, args.dask, args.threads, args.nworkers)
+    obj = main(args.n, args.s, args.dask, args.threads, args.nworkers)
