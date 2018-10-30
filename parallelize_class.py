@@ -23,11 +23,6 @@ parser.add_argument('-n',
                     default=20,
                     type=int)
 
-parser.add_argument('-threads',
-                    help='Use threads instead of processes with dask (False)',
-                    default=False,
-                    action='store_true')
-
 parser.add_argument('-nworkers',
                     help='set the number of workers (os.cpu_count())',
                     default=os.cpu_count(),
@@ -37,18 +32,48 @@ parser.add_argument('-s', help='Run the analysis serially (False)',
                     default=False, action='store_true')
 
 class FindStars(object):
-    """docstring for FindStars"""
+    """
+    A simple class for finding stars. It has two methods; find and show_stars
+
+    The find()
+    """
     def __init__(self, data):
 
         self.data = data
         self.sources = None
 
-    def find(self):
-        mean, median, std = sigma_clipped_stats(self.data, sigma=3.0, iters=5)
-        daofind = DAOStarFinder(fwhm=5.5, threshold=5*std)
+    def find(self, sigma_clip_thresh=3, fwhm=5.5, threshold=5):
+        """ Method for finding sources in the input data
+
+        Parameters
+        ----------
+        sigma_clip_thresh : threshold to use in sigma clipping
+        fwhm : FWHM of gaussian kernel to use in photutils.DAOStarFinder()
+        threshold : threshold above background to use in source detection
+
+        Returns
+        -------
+
+        """
+        mean, median, std = sigma_clipped_stats(self.data,
+                                                sigma=sigma_clip_thresh,
+                                                iters=5)
+        daofind = DAOStarFinder(fwhm=fwhm, threshold=threshold*std)
         self.sources = daofind(self.data - median)
 
     def show_stars(self, data, sources):
+        """ Convenience method for plotting the identified sources
+
+        Parameters
+        ----------
+        data : FITS data to plot
+        sources : Sources found in the FITS data
+
+        Returns
+        -------
+
+        """
+
         fig, ax = plt.subplots(nrows=1, ncols=1)
         norm = ImageNormalize(data,
                               stretch=LinearStretch(),
@@ -71,10 +96,25 @@ class Parallelize(FindStars):
         self.sources = []
         self.num_sources = None
 
-    def analyze(self, data):
-        obj = FindStars(data)
-        obj.find()
+    def analyze(self, data, sigma_clip_thresh=3, fwhm=5.5, threshold=5):
+        """ Find sources in the data
 
+        Parameters
+        ----------
+        data : FITS data
+        sigma_clip_thresh : threshold to use in sigma clipping
+        fwhm : FWHM of gaussian kernel to use in photutils.DAOStarFinder()
+        threshold : threshold above background to use in source detection
+
+        Returns
+        -------
+        All sources identified in input image
+        """
+        # Instantiate a FindStars object
+        obj = FindStars(data)
+
+        # Use the find method on the FindStars object to identify sources
+        obj.find(sigma_clip_thresh, fwhm, threshold)
         return obj.sources
 
     def run_serial(self):
@@ -85,9 +125,14 @@ class Parallelize(FindStars):
         total processing time
 
         """
+        tmp = []
         start_time = time.time()
         for dset in self.dataset:
-            self.sources.append(self.analyze(dset))
+            tmp.append(self.analyze(dset,
+                                    sigma_clip_thresh=3,
+                                    fwhm=5.5,
+                                    threshold=5))
+        self.sources = tmp
         end_time = time.time()
         runtime = (end_time - start_time) / 60
         self.num_sources = sum([len(val) for val in self.sources])
@@ -96,7 +141,7 @@ class Parallelize(FindStars):
 
         return runtime
 
-    def run_parallel(self, threads=False, use_dask=True, nworkers=None):
+    def run_parallel(self, use_dask=True, nworkers=None):
         """ Find sources in all images at once
 
         This will spawn a total of nworkers processes to use in source
@@ -116,24 +161,32 @@ class Parallelize(FindStars):
         if use_dask:
             print('Analyzing {} datasets with dask'.format(self.N))
             start_time = time.time()
-            delayed_objects = [dask.delayed(self.analyze)(dset)
+            # Isn't dask nice?
+            delayed_objects = [dask.delayed(self.analyze)(dset,
+                                                          sigma_clipping=3,
+                                                          fwhm=5.5,
+                                                          threshold=5)
                                for dset in self.dataset]
-            if threads:
-                print('Multithreading')
-                self.sources = dask.compute(*delayed_objects,
-                                       scheduler='threads',
-                                       num_workers=nworkers)
-            else:
-                print('Multiprocessing')
-                self.sources = dask.compute(*delayed_objects,
-                                       scheduler='processes',
-                                       num_workers=nworkers)
+
+            self.sources = dask.compute(*delayed_objects,
+                                        scheduler='processes',
+                                        num_workers=nworkers)
             end_time = time.time()
         else:
             print('Analyzing {} datasets with multiprocessing'.format(self.N))
             start_time = time.time()
+            # Because of the limitations with multiprocessing, we have to
+            # generate lists of all the constant values that are the same
+            # length as our list of the datasets
+            fwhm = [5.5]*self.N
+            sigma_clipping_thresh = [3]*self.N
+            source_finding_thresh = [5]*self.N
+            inputs = list(zip(self.dataset,
+                              sigma_clipping_thresh,
+                              fwhm,
+                              source_finding_thresh))
             with mp.Pool(nworkers) as pool:
-                self.sources = pool.map(self.analyze,self.dataset)
+                self.sources = pool.starmap(self.analyze, inputs)
             end_time = time.time()
 
         runtime = (end_time - start_time)/60
@@ -147,15 +200,13 @@ class Parallelize(FindStars):
 
 
 
-def main(N=20, serial=False, use_dask=False,
-         dask_threads=False, nworkers=os.cpu_count()):
+def main(N=20, serial=False, use_dask=False, nworkers=os.cpu_count()):
 
     hdu = datasets.load_star_image()
     dataset = [hdu.data]*N
     obj = Parallelize(dataset)
     if not serial:
         obj.run_parallel(use_dask=use_dask,
-                         threads=dask_threads,
                          nworkers=nworkers)
     else:
         obj.run_serial()
@@ -164,4 +215,4 @@ def main(N=20, serial=False, use_dask=False,
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    obj = main(args.n, args.s, args.dask, args.threads, args.nworkers)
+    obj = main(args.n, args.s, args.dask, args.nworkers)
