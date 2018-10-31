@@ -24,11 +24,6 @@ parser.add_argument('-n',
                     default=20,
                     type=int)
 
-parser.add_argument('-threads',
-                    help='Use threads instead of processes with dask (False)',
-                    default=False,
-                    action='store_true')
-
 parser.add_argument('-nworkers',
                     help='set the number of workers (os.cpu_count())',
                     default=os.cpu_count(),
@@ -54,7 +49,6 @@ def find_sources(data, sigma_clip_thresh=3, fwhm=5.5, threshold=5):
     -------
 
     """
-    print(fwhm)
     mean, median, std = sigma_clipped_stats(data,
                                             sigma=sigma_clip_thresh,
                                             iters=5)
@@ -155,7 +149,7 @@ def run_parallel(dataset, use_dask=True, nworkers=None):
         # Because of the limitations with multiprocessing, we have to
         # generate lists of all the constant values that are the same
         # length as our list of the datasets
-        fwhm = [3]*N
+        fwhm = [5.5]*N
         sigma_clipping_thresh = [3]*N
         source_finding_thresh = [5]*N
         inputs = list(zip(dataset,
