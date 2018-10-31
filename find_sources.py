@@ -79,7 +79,7 @@ def show_sources(data, sources):
     apertures = CircularAperture((sources['xcentroid'],
                                   sources['ycentroid']),r=3)
     apertures.plot(color='red', lw=1.5, alpha=0.75)
-    ax.grid('off')
+    ax.grid(False)
     fig.savefig('example_image.png', format='png', dpi=275)
     plt.show()
 
