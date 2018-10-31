@@ -21,3 +21,5 @@ optional arguments:
   -s                  Run the analysis serially (False)
   -plot               Show an example of the sources found (False)
   ```
+
+It also contains a third script, `find_sources_class.py`, which is a modification of the `find_sources.py` example to use classes. The results are the same, but the class based approach is much easier to work with in an interactive `ipython` session. 
