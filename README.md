@@ -5,7 +5,7 @@ This repo contains two examples on how to parallelize your workflow using `dask`
  - A trivialized example of how to parallelize a function of more than argument using `dask`. It also includes a solution using the `multiprocessing` module, however this solution only works in python 3.3+. 
  - The main point of the example is to demonstrate the ability to pass the arguments directly to the function when using `dask`. This is in contrast with the approach in `multiprocessing` which requires the use of the `starmap` method on the [`Pool`](https://docs.python.org/3/library/multiprocessing.html?highlight=pool#module-multiprocessing.pool) class, which will unpack a tuple of arguments for you. 
 
-[find_sources.py]():
+[find_sources.py](https://github.com/nmiles2718/parallelization_example/blob/master/find_sources.py):
 - A slightly more complicated example of how to parallelize the process of finding sources in a list of astronomical images. In order to keep the example self-contained, it leverages one of the example datasets installed with the [`photutils`](https://photutils.readthedocs.io/en/stable/) package to generate a fake dataset.
 - It can be run from the command line using the command line arguments to set the number of images in the fake dataset, to set the number of worker processes to use, to specify which parallelization framework to use (`dask` or `multiprocessing`),to plot all the sources found for one of the fake datasets (after processing has completed), or to just run things serially so you can establish a baseline for comparison. 
 
@@ -22,4 +22,4 @@ optional arguments:
   -plot               Show an example of the sources found (False)
   ```
 
-It also contains a third script, `find_sources_class.py`, which is a modification of the `find_sources.py` example to use classes. The results are the same, but the class based approach is much easier to work with in an interactive `ipython` session. 
+It also contains a third script, `find_sources_class.py`, which is a modification of the `find_sources.py` example to use classes. The results are the same, but the class based approach is much easier to work with in an interactive `ipython` session. When run interactively, it also supports the use of a customized dataset, as opposed to one supplied by `photutils`. When run from the command line, it will automatically generate a fake dataset for you. 
