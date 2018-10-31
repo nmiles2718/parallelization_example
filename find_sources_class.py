@@ -163,7 +163,7 @@ class Parallelize(FindStars):
             start_time = time.time()
             # Isn't dask nice?
             delayed_objects = [dask.delayed(self.analyze)(dset,
-                                                          sigma_clipping=3,
+                                                          sigma_clip_thresh=3,
                                                           fwhm=5.5,
                                                           threshold=5)
                                for dset in self.dataset]
@@ -179,10 +179,10 @@ class Parallelize(FindStars):
             # generate lists of all the constant values that are the same
             # length as our list of the datasets
             fwhm = [5.5]*self.N
-            sigma_clipping_thresh = [3]*self.N
+            sigma_clip_thresh = [3]*self.N
             source_finding_thresh = [5]*self.N
             inputs = list(zip(self.dataset,
-                              sigma_clipping_thresh,
+                              sigma_clip_thresh,
                               fwhm,
                               source_finding_thresh))
             with mp.Pool(nworkers) as pool:
