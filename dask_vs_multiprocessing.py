@@ -94,6 +94,10 @@ def use_multiprocessing():
 def use_dask(scheduler='processes'):
     """Parallelize the summing of 100 pairs of 3 numbers with dask
 
+    Parameters
+    ----------
+    scheduler : scheduler for dask.compute function
+
     Returns
     -------
     results : list of results containing the sums of the 3 input numbers
